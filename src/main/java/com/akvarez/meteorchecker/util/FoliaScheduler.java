@@ -43,6 +43,14 @@ public final class FoliaScheduler {
         }
     }
 
+    public static void runGlobalDelayed(Plugin plugin, Runnable task, long delayTicks) {
+        if (IS_FOLIA) {
+            Bukkit.getGlobalRegionScheduler().runDelayed(plugin, scheduledTask -> task.run(), delayTicks);
+        } else {
+            Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks);
+        }
+    }
+
     public static void runGlobalTimer(Plugin plugin, Runnable task, long initialDelayTicks, long periodTicks) {
         if (IS_FOLIA) {
             Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduledTask -> task.run(), initialDelayTicks, periodTicks);

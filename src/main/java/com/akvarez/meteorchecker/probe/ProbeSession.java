@@ -1,19 +1,20 @@
 package com.akvarez.meteorchecker.probe;
 
-import com.comphenix.protocol.wrappers.BlockPosition;
+import com.github.retrooper.packetevents.util.Vector3i;
+
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ProbeSession {
 
     private final UUID playerUuid;
-    private final BlockPosition position;
+    private final Vector3i position;
     private final String[] keys;
     private final String[] fallbacks;
     private final long createdAtMillis;
     private final AtomicBoolean handled = new AtomicBoolean(false);
 
-    public ProbeSession(UUID playerUuid, BlockPosition position, String[] keys, String[] fallbacks, long createdAtMillis) {
+    public ProbeSession(UUID playerUuid, Vector3i position, String[] keys, String[] fallbacks, long createdAtMillis) {
         this.playerUuid = playerUuid;
         this.position = position;
         this.keys = keys;
@@ -25,7 +26,7 @@ public final class ProbeSession {
         return playerUuid;
     }
 
-    public BlockPosition getPosition() {
+    public Vector3i getPosition() {
         return position;
     }
 

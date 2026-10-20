@@ -1,0 +1,7 @@
+# MeteorChecker Configuration
+
+# Delay in ticks before probing a player after they join (20 ticks = 1 second)
+probe-delay: 25
+
+# Kick message sent to players detected with Meteor Client
+kick-message: "<red>meteor client detect please remove and join back"

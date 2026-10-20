@@ -2,10 +2,10 @@ package com.akvarez.meteorchecker.probe;
 
 import com.akvarez.meteorchecker.MeteorChecker;
 import com.akvarez.meteorchecker.util.FoliaScheduler;
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.BlockPosition;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.util.Vector3i;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerCloseWindow;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerOpenSignEditor;
 import net.kyori.adventure.text.Component;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public final class ProbeManager {
 
@@ -33,13 +32,10 @@ public final class ProbeManager {
     private static final BlockData SIGN_DATA = Material.OAK_SIGN.createBlockData();
 
     private final MeteorChecker plugin;
-    private final ProtocolManager protocol;
     private final ConcurrentHashMap<UUID, ProbeSession> activeSessions = new ConcurrentHashMap<>();
-    private final AtomicInteger positionOffset = new AtomicInteger();
 
-    public ProbeManager(MeteorChecker plugin, ProtocolManager protocol) {
+    public ProbeManager(MeteorChecker plugin) {
         this.plugin = plugin;
-        this.protocol = protocol;
     }
 
     public ProbeSession getSession(UUID playerUuid) {
@@ -56,11 +52,11 @@ public final class ProbeManager {
         World world = player.getWorld();
         Location loc = player.getLocation();
 
-        int x = loc.getBlockX() + (positionOffset.incrementAndGet() & 7);
+        int x = loc.getBlockX();
         int z = loc.getBlockZ();
         int y = Math.max(world.getMinHeight(), Math.min(world.getMaxHeight() - 1, loc.getBlockY() - 3));
 
-        BlockPosition pos = new BlockPosition(x, y, z);
+        Vector3i pos = new Vector3i(x, y, z);
         Location signLoc = new Location(world, x, y, z);
         BlockData original = world.getBlockAt(x, y, z).getBlockData();
 
@@ -83,13 +79,13 @@ public final class ProbeManager {
         player.sendBlockChange(signLoc, SIGN_DATA);
         player.sendSignChange(signLoc, lines, DyeColor.BLACK, false);
 
-        // 2. Send Open Sign Editor packet
-        sendOpenSignEditor(player, pos);
+        // 2. Send Open Sign Editor packet via PacketEvents
+        PacketEvents.getAPI().getPlayerManager().sendPacket(player, new WrapperPlayServerOpenSignEditor(pos, true));
 
         // 3. Force container close after 2 ticks
         FoliaScheduler.runForPlayerDelayed(plugin, player, () -> {
             if (player.isOnline()) {
-                sendContainerClose(player);
+                PacketEvents.getAPI().getPlayerManager().sendPacket(player, new WrapperPlayServerCloseWindow(0));
             }
         }, 2L);
 
@@ -101,32 +97,8 @@ public final class ProbeManager {
         }, 6L);
     }
 
-    private void sendOpenSignEditor(Player player, BlockPosition pos) {
-        try {
-            PacketContainer packet = protocol.createPacket(PacketType.Play.Server.OPEN_SIGN_EDITOR);
-            packet.getBlockPositionModifier().write(0, pos);
-            if (!packet.getBooleans().getFields().isEmpty()) {
-                packet.getBooleans().write(0, true);
-            }
-            protocol.sendServerPacket(player, packet);
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to send OPEN_SIGN_EDITOR to " + player.getName() + ": " + e.getMessage());
-        }
-    }
-
-    private void sendContainerClose(Player player) {
-        try {
-            PacketContainer packet = protocol.createPacket(PacketType.Play.Server.CLOSE_WINDOW);
-            packet.getIntegers().write(0, 0);
-            protocol.sendServerPacket(player, packet);
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to send CLOSE_WINDOW to " + player.getName() + ": " + e.getMessage());
-        }
-    }
-
     public void sweepTimeouts() {
         long now = System.currentTimeMillis();
-        // Remove sessions older than 10 seconds (10000ms)
         activeSessions.entrySet().removeIf(entry -> now - entry.getValue().getCreatedAtMillis() > 10000L);
     }
 
