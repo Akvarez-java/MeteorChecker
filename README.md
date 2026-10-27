@@ -27,3 +27,5 @@ kick-message: "<red>meteor client detect please remove and join back"
 
 ### Permissions
 - `meteorchecker.bypass` - Bypass the check (default: op)
+---
+by akvarez
